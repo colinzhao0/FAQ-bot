@@ -79,7 +79,7 @@ async def clear(ctx):
         removals = len(knowledge_base['questions'])
         knowledge_base["questions"] = []
         save_knowledge_base('knowledge_base.json',knowledge_base)
-        await ctx.respond(f"Knowledge base cleared({removals} entries removed)!")
+        await ctx.respond(f"Knowledge base cleared ({removals} entries removed)!")
 
     except:
         await ctx.respond("Something went wrong!")
