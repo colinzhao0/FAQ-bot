@@ -83,14 +83,37 @@ async def clear(ctx):
     except:
         await ctx.respond("Something went wrong!")
 
-class PageToggle(discord.ui.View): # Create a class called MyView that subclasses discord.ui.View
+class PageToggle(discord.ui.View): 
     @discord.ui.button(style=discord.ButtonStyle.primary, emoji="⬅️") 
     async def left_button_callback(self, button, interaction):
-        await interaction.response.send_message("You clicked the left button!") # Send a message when the button is clicked
+        await interaction.response.send_message("You clicked the left button!") 
+        
+        if pageNum - 1 > 0:
+            pageNum -=1 
+
+            start = pageNum*10
+            end = min((KBSize*10), (pageNum+1)*10-1)
+
+            for q in knowledge_base["questions"][start:end]:
+                KBEmbed.add_field(name=q["question"], value=q["answer"], inline=False)
+
+            KBEmbed.set_footer(text=f"Page {pageNum+1}/{(len(knowledge_base['questions']) - 1) // 10 + 1}")
 
     @discord.ui.button(style=discord.ButtonStyle.primary, emoji="➡️") 
     async def right_button_callback(self, button, interaction):
-        await interaction.response.send_message("You clicked the right button!") # Send a message when the button is clicked
+        await interaction.response.send_message("You clicked the right button!") 
+
+        if pageNum + 1 <= KBSize/10:
+            pageNum +=1 
+
+            start = pageNum*10
+            end = min((KBSize*10), (pageNum+1)*10-1)
+
+            for q in knowledge_base["questions"][start:end]:
+                KBEmbed.add_field(name=q["question"], value=q["answer"], inline=False)
+
+            KBEmbed.set_footer(text=f"Page {pageNum+1}/{(len(knowledge_base['questions']) - 1) // 10 + 1}")
+
 
 @bot.slash_command(name="knowledgebase", description="View the knowledge base", guild_ids=[1354165869437255871])
 async def knowledgebase(ctx):
@@ -114,7 +137,7 @@ async def knowledgebase(ctx):
         print(f"Error: {e}")
         await ctx.respond("Something went wrong!")
 
-pageNum = 0
+pageNum= 0
 KBsize = 0
 
 KBEmbed = discord.Embed(
@@ -123,4 +146,5 @@ KBEmbed = discord.Embed(
         )
 
 knowledge_base:dict=load_knowledge_base('knowledge_base.json')
+KBsize = KBSize = len(knowledge_base["questions"])
 bot.run(os.getenv('DISCORD_TOKEN')) # run the bot with the token
