@@ -76,75 +76,82 @@ async def undo(ctx):
 async def clear(ctx):
     await ctx.channel.trigger_typing()
     try:
+        removals = len(knowledge_base['questions'])
         knowledge_base["questions"] = []
         save_knowledge_base('knowledge_base.json',knowledge_base)
-        await ctx.respond(f"Knowledge base cleared({len(knowledge_base["questions"])} entries removed)!")
+        await ctx.respond(f"Knowledge base cleared({removals} entries removed)!")
 
     except:
         await ctx.respond("Something went wrong!")
 
 class PageToggle(discord.ui.View): 
-    @discord.ui.button(style=discord.ButtonStyle.primary, emoji="⬅️") 
+    def __init__(self, knowledge_base, page_num=0):
+        super().__init__()
+        self.knowledge_base = knowledge_base
+        self.page_num = page_num  # Tracks the current page number
+
+    async def update_embed(self, interaction):
+        # Create an embed for the current page of the knowledge base
+        embed = discord.Embed(
+            title="FAQ-Bot Knowledgebase",
+            color=discord.Colour.blurple(),
+        )
+
+        # Determine the range of questions to display on the current page
+        start = self.page_num * 10
+        end = min((self.page_num + 1) * 10, len(self.knowledge_base["questions"]))
+        for q in self.knowledge_base["questions"][start:end]:
+            embed.add_field(name=q["question"], value=q["answer"], inline=False)
+
+        # Add footer with page information
+        embed.set_footer(text=f"Page {self.page_num + 1}/{(len(self.knowledge_base['questions']) - 1) // 10 + 1}")
+        await interaction.response.edit_message(embed=embed, view=self)
+
+    @discord.ui.button(style=discord.ButtonStyle.primary, emoji="⬅️")
     async def left_button_callback(self, button, interaction):
-        await interaction.response.send_message("You clicked the left button!") 
-        
-        if pageNum - 1 > 0:
-            pageNum -=1 
+        # Navigate to the previous page if not on the first page
+        if self.page_num > 0:
+            self.page_num -= 1
+            await self.update_embed(interaction)
 
-            start = pageNum*10
-            end = min((KBSize*10), (pageNum+1)*10-1)
-
-            for q in knowledge_base["questions"][start:end]:
-                KBEmbed.add_field(name=q["question"], value=q["answer"], inline=False)
-
-            KBEmbed.set_footer(text=f"Page {pageNum+1}/{(len(knowledge_base['questions']) - 1) // 10 + 1}")
-
-    @discord.ui.button(style=discord.ButtonStyle.primary, emoji="➡️") 
+    @discord.ui.button(style=discord.ButtonStyle.primary, emoji="➡️")
     async def right_button_callback(self, button, interaction):
-        await interaction.response.send_message("You clicked the right button!") 
-
-        if pageNum + 1 <= KBSize/10:
-            pageNum +=1 
-
-            start = pageNum*10
-            end = min((KBSize*10), (pageNum+1)*10-1)
-
-            for q in knowledge_base["questions"][start:end]:
-                KBEmbed.add_field(name=q["question"], value=q["answer"], inline=False)
-
-            KBEmbed.set_footer(text=f"Page {pageNum+1}/{(len(knowledge_base['questions']) - 1) // 10 + 1}")
-
+        # Navigate to the next page if there are more pages
+        if (self.page_num + 1) * 10 < len(self.knowledge_base["questions"]):
+            self.page_num += 1
+            await self.update_embed(interaction)
 
 @bot.slash_command(name="knowledgebase", description="View the knowledge base", guild_ids=[1354165869437255871])
 async def knowledgebase(ctx):
     await ctx.channel.trigger_typing()
-    KBSize = len(knowledge_base["questions"])
     try:
-        if len(knowledge_base["questions"])>0:
-            start = pageNum*10
-            end = min((KBSize*10), (pageNum+1)*10-1)
-
+        if len(knowledge_base["questions"]) > 0:
+            # Initialize the pagination view
+            view = PageToggle(knowledge_base)
+            
+            # Create the initial embed for the first page
+            embed = discord.Embed(
+                title="FAQ-Bot Knowledgebase",
+                color=discord.Colour.blurple(),
+            )
+            start = 0
+            end = min(10, len(knowledge_base["questions"]))
             for q in knowledge_base["questions"][start:end]:
-                KBEmbed.add_field(name=q["question"], value=q["answer"], inline=False)
-
-            KBEmbed.set_footer(text=f"Page {pageNum+1}/{(len(knowledge_base['questions']) - 1) // 10 + 1}")
-
-            await ctx.respond(f"Here is my knowledgebase: ", embed=KBEmbed, view=PageToggle())
+                embed.add_field(name=q["question"], value=q["answer"], inline=False)
+            embed.set_footer(text=f"Page 1/{(len(knowledge_base['questions']) - 1) // 10 + 1}")
+            
+            # Send the embed with the pagination buttons
+            await ctx.respond("Here is my knowledge base:", embed=embed, view=view)
         else:
+            # Respond if the knowledge base is empty
             await ctx.respond("No questions in the knowledge base!")
-
     except Exception as e:
+        # Handle any unexpected errors
         print(f"Error: {e}")
         await ctx.respond("Something went wrong!")
 
-pageNum= 0
-KBsize = 0
+# Load the knowledge base from the JSON file
+knowledge_base: dict = load_knowledge_base('knowledge_base.json')
 
-KBEmbed = discord.Embed(
-        title="FAQ-Bot Knowledgebase",
-        color=discord.Colour.blurple(), 
-        )
-
-knowledge_base:dict=load_knowledge_base('knowledge_base.json')
-KBsize = KBSize = len(knowledge_base["questions"])
-bot.run(os.getenv('DISCORD_TOKEN')) # run the bot with the token
+# Run the bot using the token from the environment variables
+bot.run(os.getenv('DISCORD_TOKEN'))
