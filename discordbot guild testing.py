@@ -1,5 +1,6 @@
 import discord, json, os
 from discord import Option
+from discord import default_permissions
 from difflib import get_close_matches
 from dotenv import load_dotenv
 
@@ -47,6 +48,7 @@ async def ask(ctx, question: str=discord.Option(str, description="What do you wa
 
 #if question is blank, train last asked question
 @bot.slash_command(name="train", description="Teach the bot! (Add new questions)", guild_ids=[1354165869437255871])
+@default_permissions(administrator=True)
 async def train(ctx, question: str = discord.Option(str, description="Question", required=True), answer: str = discord.Option(str, description="Answer", required=True)):
     await ctx.channel.trigger_typing()
     try:
@@ -73,6 +75,7 @@ async def undo(ctx):
         await ctx.respond("Something went wrong!")
 
 @bot.slash_command(name="clear", description="Clear the knowledge base", guild_ids=[1354165869437255871])
+@default_permissions(administrator=True)
 async def clear(ctx):
     await ctx.channel.trigger_typing()
     try:
@@ -149,6 +152,11 @@ async def knowledgebase(ctx):
         # Handle any unexpected errors
         print(f"Error: {e}")
         await ctx.respond("Something went wrong!")
+
+
+#ideas to add: Admin-only commands (undo, clear)
+
+
 
 # Load the knowledge base from the JSON file
 knowledge_base: dict = load_knowledge_base('knowledge_base.json')
